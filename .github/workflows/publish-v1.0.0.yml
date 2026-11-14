@@ -1,0 +1,38 @@
+name: Publish v1.0.0
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/publish-v1.0.0.yml']
+  workflow_dispatch:
+permissions: {}
+jobs:
+  publish:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 5a11f017a4dcd07023994523b843040b98e4b5b1
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.428'
+      - name: Build Windows x64 executable
+        run: dotnet publish src/Desktop/BattleNetQuickSwitch.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=embedded -o dist
+      - name: Publish v1.0.0
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $hash = (Get-FileHash dist/BattleNetQuickSwitch.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  BattleNetQuickSwitch.exe" | Set-Content dist/SHA256SUMS.txt -Encoding ascii
+          @'
+          Windows 10/11 x64 便携版，自带 .NET 运行时，无需安装。EXE 未做数字签名。
+
+          这是独立的第三方工具。在本机保存战网的加密登录快照，切换时由战网客户端验证登录。请仅用于自己的账号，并妥善保管本地快照。真实战网登录尚未完成 Windows 实机验证。
+          '@ | Set-Content release-notes.md -Encoding utf8
+          gh release create v1.0.0 dist/BattleNetQuickSwitch.exe dist/SHA256SUMS.txt --repo "$env:GH_REPO" --target 5a11f017a4dcd07023994523b843040b98e4b5b1 --title "战网一键切号 v1.0.0" --notes-file release-notes.md
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
