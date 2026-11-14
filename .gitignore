@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+dist/
+*.exe
+*.user
+.vs/
+accounts.json
+setup.json
+switch-recovery.json
+launcher.json
+Battle.net.config
+CachedData.db*
